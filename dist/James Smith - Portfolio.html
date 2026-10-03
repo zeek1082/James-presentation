@@ -268,6 +268,98 @@
 <link id="gfont-DM-Sans" rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&amp;display=swap">
 </head>
 <body>
+<!-- Password gate (matches james-portfolio-ruddy.vercel.app) -->
+<style>
+  @keyframes gateWordIn { from { transform: translateY(110%); } to { transform: translateY(0); } }
+  @keyframes gateFormIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes pw-shake {
+    0% { transform: translateX(0); } 15% { transform: translateX(-10px); } 30% { transform: translateX(9px); }
+    45% { transform: translateX(-7px); } 60% { transform: translateX(5px); } 75% { transform: translateX(-3px); } 100% { transform: translateX(0); }
+  }
+  #pw-gate { position: fixed; inset: 0; z-index: 2147483647; background: #0a0a0a; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+  #pw-gate-inner { display: flex; flex-direction: column; align-items: center; transform-origin: center center; }
+  #pw-gate .pw-words { text-align: center; line-height: 0.88; margin-bottom: 3rem; user-select: none; pointer-events: none; }
+  #pw-gate .pw-word-wrap { overflow: hidden; display: block; }
+  #pw-gate .pw-word { font-family: Syne, sans-serif; font-weight: 800; font-size: clamp(4rem, 16vw, 16rem); color: #F2EDE8; text-transform: uppercase; letter-spacing: -0.04em; display: block; animation: gateWordIn 0.9s cubic-bezier(0.16, 1, 0.3, 1) both; }
+  #pw-form { display: flex; flex-direction: column; align-items: center; gap: 1rem; margin: 0; animation: gateFormIn 0.7s cubic-bezier(0.23, 1, 0.32, 1) both; animation-delay: 0.55s; }
+  #pw-form.pw-shake { animation: pw-shake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both; }
+  #pw-input { font-family: 'Space Mono', monospace; font-size: 0.75rem; letter-spacing: 0.2em; color: #F2EDE8; background: transparent; border: 1px solid rgba(242,237,232,0.25); border-radius: 2px; padding: 0.75rem 1.25rem; width: 240px; outline: none; text-align: left; transition: border-color 200ms ease; box-sizing: content-box; }
+  #pw-input:focus { border-color: rgba(242,237,232,0.7); }
+  #pw-input.pw-error, #pw-input.pw-error:focus { border-color: #ff4444; }
+  #pw-gate .pw-btn { font-family: 'Space Mono', monospace; font-size: 0.65rem; letter-spacing: 0.2em; text-transform: uppercase; color: #0a0a0a; background: #F2EDE8; border: 1px solid #F2EDE8; border-radius: 2px; padding: 0.65rem 2rem; cursor: pointer; position: relative; overflow: hidden; transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1), color 220ms ease; }
+  #pw-gate .pw-btn:active { transform: scale(0.97); }
+  #pw-gate .pw-btn::before { content: ''; position: absolute; inset: 0; background: #0a0a0a; transform: translateX(-101%); transition: transform 280ms cubic-bezier(0.16, 1, 0.3, 1); z-index: 0; }
+  #pw-gate .pw-btn:hover::before { transform: translateX(0); }
+  #pw-gate .pw-btn-text { position: relative; z-index: 1; transition: color 220ms ease; color: #0a0a0a; }
+  #pw-gate .pw-btn:hover .pw-btn-text { color: #F2EDE8; }
+  #pw-msg { font-family: 'Space Mono', monospace; font-size: 0.6rem; letter-spacing: 0.15em; color: #ff4444; margin: 0; text-transform: uppercase; display: none; }
+</style>
+<div id="pw-gate">
+  <div id="pw-gate-inner">
+    <div class="pw-words">
+      <div class="pw-word-wrap"><div class="pw-word" style="animation-delay:0.1s">James</div></div>
+      <div class="pw-word-wrap"><div class="pw-word" style="animation-delay:0.22s">Smith</div></div>
+    </div>
+    <form id="pw-form" autocomplete="off">
+      <input id="pw-input" type="password" placeholder="Enter password" autocomplete="off" autofocus>
+      <button type="submit" class="pw-btn"><span class="pw-btn-text">Enter</span></button>
+      <p id="pw-msg">Incorrect password</p>
+    </form>
+  </div>
+</div>
+<script>
+(function () {
+  var PASSWORD = "James2026", KEY = "js_portfolio_auth";
+  var gate = document.getElementById("pw-gate");
+  var authed = false;
+  try { authed = sessionStorage.getItem(KEY) === "1"; } catch (e) {}
+  if (authed) { gate.remove(); return; }
+
+  var inner = document.getElementById("pw-gate-inner");
+  var form = document.getElementById("pw-form");
+  var input = document.getElementById("pw-input");
+  var msg = document.getElementById("pw-msg");
+
+  // Keep keystrokes in the gate from driving the slide deck underneath.
+  ["keydown", "keyup", "keypress"].forEach(function (t) {
+    gate.addEventListener(t, function (e) { e.stopPropagation(); });
+  });
+  setTimeout(function () { input.focus(); }, 600);
+
+  input.addEventListener("input", function () {
+    input.classList.remove("pw-error"); msg.style.display = "none";
+  });
+
+  form.addEventListener("submit", function (e) {
+    e.preventDefault();
+    if (input.value === PASSWORD) { unlock(); return; }
+    input.value = ""; input.classList.add("pw-error"); msg.style.display = "block";
+    form.classList.remove("pw-shake"); void form.offsetWidth; form.classList.add("pw-shake");
+  });
+
+  function unlock() {
+    form.style.display = "none";
+    var DURATION = 1200, FADE = 700, start = performance.now();
+    function frame(now) {
+      var t = Math.min((now - start) / DURATION, 1);
+      inner.style.transform = "scale(" + (1 + t * t * t * t * 11) + ")";
+      if (t > 0.4) {
+        var d = Math.min((t - 0.4) / 0.6, 1), n = d * d;
+        gate.style.background = "rgb(" + Math.round(10 + n * 232) + "," + Math.round(10 + n * 227) + "," + Math.round(10 + n * 222) + ")";
+      }
+      if (t < 1) { requestAnimationFrame(frame); return; }
+      try { sessionStorage.setItem(KEY, "1"); } catch (e) {}
+      requestAnimationFrame(function () {
+        gate.style.transition = "opacity " + FADE + "ms cubic-bezier(0.23, 1, 0.32, 1)";
+        gate.style.opacity = "0";
+        setTimeout(function () { gate.remove(); }, FADE + 50);
+      });
+    }
+    requestAnimationFrame(frame);
+  }
+})();
+</script>
+
 
 <deck-stage width="1920" height="1080" data-om-id="ae5f8416:9" style="--deck-rail-w: 188px;">
 
